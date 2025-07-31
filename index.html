@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalorieTracker - Track Your Macros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        dark: '#1F2937',
+                        'dark-lighter': '#374151'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'bounce-in': 'bounceIn 0.8s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'gradient': 'gradient 3s ease infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 min-h-screen text-white">
+    <!-- Navigation -->
+    <nav class="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 animate-fade-in">
+                    <i class="fas fa-fire text-orange-500 text-2xl"></i>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">
+                        CalorieTracker
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-300">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="settingsBtn" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-300">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-6 py-8">
+        <!-- Daily Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Calories Card -->
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/30 transition-all duration-300 animate-slide-up" style="animation-delay: 0.1s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3 bg-orange-500/20 rounded-xl">
+                            <i class="fas fa-fire text-orange-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold">Calories</h3>
+                            <p class="text-sm text-gray-300">Daily Goal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span id="caloriesConsumed" class="text-2xl font-bold">0</span>
+                        <span class="text-gray-400">/ <span id="caloriesGoal">2000</span></span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="caloriesProgress" class="bg-gradient-to-r from-orange-400 to-red-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-300"><span id="caloriesRemaining">2000</span> remaining</p>
+                </div>
+            </div>
+
+            <!-- Protein Card -->
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/30 transition-all duration-300 animate-slide-up" style="animation-delay: 0.2s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3 bg-blue-500/20 rounded-xl">
+                            <i class="fas fa-dumbbell text-blue-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold">Protein</h3>
+                            <p class="text-sm text-gray-300">Daily Goal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span id="proteinConsumed" class="text-2xl font-bold">0g</span>
+                        <span class="text-gray-400">/ <span id="proteinGoal">150g</span></span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="proteinProgress" class="bg-gradient-to-r from-blue-400 to-cyan-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-300"><span id="proteinRemaining">150g</span> remaining</p>
+                </div>
+            </div>
+
+            <!-- Carbs Card -->
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/30 transition-all duration-300 animate-slide-up" style="animation-delay: 0.3s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3 bg-green-500/20 rounded-xl">
+                            <i class="fas fa-leaf text-green-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold">Carbs</h3>
+                            <p class="text-sm text-gray-300">Daily Goal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span id="carbsConsumed" class="text-2xl font-bold">0g</span>
+                        <span class="text-gray-400">/ <span id="carbsGoal">250g</span></span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="carbsProgress" class="bg-gradient-to-r from-green-400 to-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-300"><span id="carbsRemaining">250g</span> remaining</p>
+                </div>
+            </div>
+
+            <!-- Fats Card -->
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/30 transition-all duration-300 animate-slide-up" style="animation-delay: 0.4s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3 bg-yellow-500/20 rounded-xl">
+                            <i class="fas fa-tint text-yellow-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold">Fats</h3>
+                            <p class="text-sm text-gray-300">Daily Goal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span id="fatsConsumed" class="text-2xl font-bold">0g</span>
+                        <span class="text-gray-400">/ <span id="fatsGoal">65g</span></span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="fatsProgress" class="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-300"><span id="fatsRemaining">65g</span> remaining</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Food Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Food Search and Add -->
+            <div class="lg:col-span-2">
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 animate-fade-in">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-plus-circle text-green-500 mr-3"></i>
+                        Add Food
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex space-x-4">
+                            <div class="flex-1">
+                                <input type="text" id="foodSearch" placeholder="Search for food..." 
+                                       class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                            </div>
+                            <button id="searchBtn" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+
+                        <!-- Quick Add Form -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="foodName" placeholder="Food name" 
+                                   class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                            <input type="number" id="calories" placeholder="Calories" 
+                                   class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                            <input type="number" id="protein" placeholder="Protein (g)" 
+                                   class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                            <input type="number" id="carbs" placeholder="Carbs (g)" 
+                                   class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                            <input type="number" id="fats" placeholder="Fats (g)" 
+                                   class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                            <input type="number" id="quantity" placeholder="Quantity" value="1" 
+                                   class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-300">
+                        </div>
+
+                        <button id="addFoodBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 font-semibold">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Food
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Summary -->
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 animate-fade-in">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-chart-pie text-purple-500 mr-3"></i>
+                    Today's Summary
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Macro Ring Chart -->
+                    <div class="flex justify-center">
+                        <div class="relative w-32 h-32">
+                            <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                                <!-- Background circle -->
+                                <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" class="text-gray-700"/>
+                                <!-- Protein arc -->
+                                <circle id="proteinArc" cx="50" cy="50" r="40" stroke="#3B82F6" stroke-width="8" fill="none" 
+                                        stroke-dasharray="251.2" stroke-dashoffset="251.2" class="transition-all duration-1000"/>
+                                <!-- Carbs arc -->
+                                <circle id="carbsArc" cx="50" cy="50" r="40" stroke="#10B981" stroke-width="8" fill="none" 
+                                        stroke-dasharray="251.2" stroke-dashoffset="251.2" class="transition-all duration-1000"/>
+                                <!-- Fats arc -->
+                                <circle id="fatsArc" cx="50" cy="50" r="40" stroke="#F59E0B" stroke-width="8" fill="none" 
+                                        stroke-dasharray="251.2" stroke-dashoffset="251.2" class="transition-all duration-1000"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div id="totalCalories" class="text-lg font-bold">0</div>
+                                    <div class="text-xs text-gray-400">kcal</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Macro Breakdown -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Protein</span>
+                            </div>
+                            <span id="proteinPercent" class="text-sm font-semibold">0%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Carbs</span>
+                            </div>
+                            <span id="carbsPercent" class="text-sm font-semibold">0%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Fats</span>
+                            </div>
+                            <span id="fatsPercent" class="text-sm font-semibold">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Food Log -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 animate-fade-in">
+            <h2 class="text-2xl font-bold mb-6 flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-list text-blue-500 mr-3"></i>
+                    Today's Food Log
+                </div>
+                <button id="clearLogBtn" class="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all duration-300">
+                    <i class="fas fa-trash mr-2"></i>
+                    Clear Log
+                </button>
+            </h2>
+            
+            <div id="foodLog" class="space-y-3">
+                <!-- Food items will be added here dynamically -->
+            </div>
+            
+            <div id="emptyState" class="text-center py-12 text-gray-400">
+                <i class="fas fa-utensils text-4xl mb-4 opacity-50"></i>
+                <p class="text-lg">No food logged yet today</p>
+                <p class="text-sm">Start by adding your first meal above!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 w-full max-w-md transform scale-95 transition-transform duration-300">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold">Daily Goals</h3>
+                    <button id="closeSettingsBtn" class="p-2 hover:bg-white/10 rounded-lg transition-colors duration-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Calories Goal</label>
+                        <input type="number" id="caloriesGoalInput" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Protein Goal (g)</label>
+                        <input type="number" id="proteinGoalInput" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Carbs Goal (g)</label>
+                        <input type="number" id="carbsGoalInput" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Fats Goal (g)</label>
+                        <input type="number" id="fatsGoalInput" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3 mt-6">
+                    <button id="saveSettingsBtn" class="flex-1 py-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300">
+                        Save Goals
+                    </button>
+                    <button id="cancelSettingsBtn" class="flex-1 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors duration-300">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

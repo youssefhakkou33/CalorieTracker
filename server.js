@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
@@ -81,7 +82,43 @@ const foodDatabaseSchema = new mongoose.Schema({
 
 const FoodDatabase = mongoose.model('FoodDatabase', foodDatabaseSchema);
 
-// Routes
+// USDA API configuration
+const USDA_API_KEY = process.env.USDA_API_KEY; // Optional, API works without key but with rate limits
+const USDA_BASE_URL = 'https://api.nal.usda.gov/fdc/v1';
+
+// Helper function to extract nutrients from USDA response
+function extractNutrients(foodItem) {
+    const nutrients = {};
+    
+    if (foodItem.foodNutrients) {
+        foodItem.foodNutrients.forEach(nutrient => {
+            switch (nutrient.nutrientId) {
+                case 1008: // Energy (calories)
+                    nutrients.calories = nutrient.value || 0;
+                    break;
+                case 1003: // Protein
+                    nutrients.protein = nutrient.value || 0;
+                    break;
+                case 1005: // Carbohydrate
+                    nutrients.carbs = nutrient.value || 0;
+                    break;
+                case 1004: // Total lipid (fat)
+                    nutrients.fats = nutrient.value || 0;
+                    break;
+            }
+        });
+    }
+    
+    return {
+        name: foodItem.description || 'Unknown Food',
+        calories: Math.round(nutrients.calories || 0),
+        protein: Math.round((nutrients.protein || 0) * 100) / 100,
+        carbs: Math.round((nutrients.carbs || 0) * 100) / 100,
+        fats: Math.round((nutrients.fats || 0) * 100) / 100,
+        fdcId: foodItem.fdcId,
+        category: foodItem.foodCategory || 'general'
+    };
+}
 
 // Get today's log
 app.get('/api/daily-log', async (req, res) => {
@@ -194,7 +231,7 @@ app.delete('/api/remove-food/:entryId', async (req, res) => {
     }
 });
 
-// Search foods in database
+// Search foods using USDA API
 app.get('/api/search-food', async (req, res) => {
     try {
         const { query } = req.query;
@@ -203,14 +240,105 @@ app.get('/api/search-food', async (req, res) => {
             return res.status(400).json({ error: 'Search query is required' });
         }
         
-        const foods = await FoodDatabase.find({
+        // First try local database for faster results
+        const localFoods = await FoodDatabase.find({
             name: { $regex: query, $options: 'i' }
-        }).limit(10);
+        }).limit(5);
         
-        res.json(foods);
+        // Search USDA API
+        const usdaUrl = `${USDA_BASE_URL}/foods/search`;
+        const params = {
+            query: query,
+            pageSize: 10,
+            dataType: ['Foundation', 'SR Legacy'], // High quality data types
+            sortBy: 'score',
+            sortOrder: 'desc'
+        };
+        
+        if (USDA_API_KEY) {
+            params.api_key = USDA_API_KEY;
+        }
+        
+        const usdaResponse = await axios.get(usdaUrl, { params });
+        
+        let usdaFoods = [];
+        if (usdaResponse.data && usdaResponse.data.foods) {
+            usdaFoods = usdaResponse.data.foods.slice(0, 8).map(extractNutrients);
+        }
+        
+        // Combine local and USDA results
+        const combinedResults = [
+            ...localFoods.map(food => ({
+                name: food.name,
+                calories: food.calories,
+                protein: food.protein,
+                carbs: food.carbs,
+                fats: food.fats,
+                category: food.category,
+                source: 'local'
+            })),
+            ...usdaFoods.map(food => ({
+                ...food,
+                source: 'usda'
+            }))
+        ];
+        
+        // Remove duplicates based on name similarity
+        const uniqueResults = [];
+        const seenNames = new Set();
+        
+        combinedResults.forEach(food => {
+            const normalizedName = food.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!seenNames.has(normalizedName)) {
+                seenNames.add(normalizedName);
+                uniqueResults.push(food);
+            }
+        });
+        
+        res.json(uniqueResults.slice(0, 10));
     } catch (error) {
-        console.error('Error searching foods:', error);
-        res.status(500).json({ error: 'Failed to search foods' });
+        console.error('Error searching foods:', error.message);
+        
+        // Fallback to local database only
+        try {
+            const localFoods = await FoodDatabase.find({
+                name: { $regex: req.query.query, $options: 'i' }
+            }).limit(10);
+            
+            res.json(localFoods.map(food => ({
+                name: food.name,
+                calories: food.calories,
+                protein: food.protein,
+                carbs: food.carbs,
+                fats: food.fats,
+                category: food.category,
+                source: 'local'
+            })));
+        } catch (fallbackError) {
+            res.status(500).json({ error: 'Failed to search foods' });
+        }
+    }
+});
+
+// Get detailed food information from USDA
+app.get('/api/food-details/:fdcId', async (req, res) => {
+    try {
+        const { fdcId } = req.params;
+        
+        const usdaUrl = `${USDA_BASE_URL}/food/${fdcId}`;
+        const params = USDA_API_KEY ? { api_key: USDA_API_KEY } : {};
+        
+        const response = await axios.get(usdaUrl, { params });
+        
+        if (response.data) {
+            const foodDetails = extractNutrients(response.data);
+            res.json(foodDetails);
+        } else {
+            res.status(404).json({ error: 'Food not found' });
+        }
+    } catch (error) {
+        console.error('Error fetching food details:', error.message);
+        res.status(500).json({ error: 'Failed to fetch food details' });
     }
 });
 

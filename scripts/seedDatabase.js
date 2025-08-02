@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const FoodDatabase = require('../models/FoodDatabase');
-
 // Extended food database for seeding
 const foods = [
     // Proteins

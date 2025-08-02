@@ -140,7 +140,7 @@ class CalorieTracker {
         this.showNotification(`Added ${foodName} to your log!`, 'success');
     }
     
-    // Search for food (API integration placeholder)
+    // Search for food using USDA API
     async searchFood() {
         const query = document.getElementById('foodSearch').value.trim();
         if (!query) return;
@@ -152,38 +152,103 @@ class CalorieTracker {
         searchBtn.disabled = true;
         
         try {
-            // Simulate API call delay
-            await this.delay(1000);
-            
-            // Mock food database
-            const mockFoods = [
-                { name: 'Chicken Breast', calories: 165, protein: 31, carbs: 0, fats: 3.6 },
-                { name: 'Brown Rice', calories: 112, protein: 2.6, carbs: 22, fats: 0.9 },
-                { name: 'Broccoli', calories: 25, protein: 3, carbs: 5, fats: 0.3 },
-                { name: 'Salmon', calories: 208, protein: 22, carbs: 0, fats: 12 },
-                { name: 'Sweet Potato', calories: 86, protein: 1.6, carbs: 20, fats: 0.1 },
-                { name: 'Greek Yogurt', calories: 100, protein: 10, carbs: 6, fats: 0.4 },
-                { name: 'Almonds', calories: 579, protein: 21, carbs: 22, fats: 50 },
-                { name: 'Banana', calories: 89, protein: 1.1, carbs: 23, fats: 0.3 }
-            ];
-            
-            const results = mockFoods.filter(food => 
-                food.name.toLowerCase().includes(query.toLowerCase())
-            );
+            // Call backend API that integrates USDA
+            const response = await fetch(`/api/search-food?query=${encodeURIComponent(query)}`);
+            const results = await response.json();
             
             if (results.length > 0) {
-                const selectedFood = results[0]; // Use first result
-                this.populateInputs(selectedFood);
-                this.showNotification(`Found ${selectedFood.name}!`, 'success');
+                // Show search results in a dropdown or modal
+                this.displaySearchResults(results);
+                this.showNotification(`Found ${results.length} food options!`, 'success');
             } else {
-                this.showNotification('No food found. Try a different search term.', 'info');
+                this.showNotification('No foods found. Try a different search term.', 'info');
             }
             
         } catch (error) {
+            console.error('Search error:', error);
             this.showNotification('Search failed. Please try again.', 'error');
         } finally {
             searchBtn.innerHTML = originalHTML;
             searchBtn.disabled = false;
+        }
+    }
+    
+    // Display search results
+    displaySearchResults(results) {
+        // Create or update search results container
+        let resultsContainer = document.getElementById('searchResults');
+        if (!resultsContainer) {
+            resultsContainer = document.createElement('div');
+            resultsContainer.id = 'searchResults';
+            resultsContainer.className = 'absolute z-50 mt-2 w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl max-h-64 overflow-y-auto';
+            
+            const searchContainer = document.getElementById('foodSearch').parentElement;
+            searchContainer.style.position = 'relative';
+            searchContainer.appendChild(resultsContainer);
+        }
+        
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<div class="p-4 text-gray-400 text-center">No results found</div>';
+            return;
+        }
+        
+        resultsContainer.innerHTML = results.map((food, index) => `
+            <div class="search-result-item p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0" 
+                 onclick="app.selectFood(${index})" data-food='${JSON.stringify(food)}'>
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-white">${food.name}</h4>
+                        <div class="flex items-center space-x-4 text-xs text-gray-300 mt-1">
+                            <span class="flex items-center">
+                                <i class="fas fa-fire text-orange-400 mr-1"></i>
+                                ${food.calories} kcal
+                            </span>
+                            <span class="flex items-center">
+                                <i class="fas fa-dumbbell text-blue-400 mr-1"></i>
+                                ${food.protein}g P
+                            </span>
+                            <span class="flex items-center">
+                                <i class="fas fa-leaf text-green-400 mr-1"></i>
+                                ${food.carbs}g C
+                            </span>
+                            <span class="flex items-center">
+                                <i class="fas fa-tint text-yellow-400 mr-1"></i>
+                                ${food.fats}g F
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">
+                            ${food.source === 'usda' ? '🇺🇸 USDA Database' : '📁 Local Database'} • 
+                            ${food.category || 'General'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Auto-hide results when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', this.hideSearchResults.bind(this), { once: true });
+        }, 100);
+    }
+    
+    // Select a food from search results
+    selectFood(index) {
+        const resultsContainer = document.getElementById('searchResults');
+        const foodItems = resultsContainer.querySelectorAll('.search-result-item');
+        
+        if (foodItems[index]) {
+            const foodData = JSON.parse(foodItems[index].getAttribute('data-food'));
+            this.populateInputs(foodData);
+            this.hideSearchResults();
+            this.showNotification(`Selected ${foodData.name}!`, 'success');
+        }
+    }
+    
+    // Hide search results
+    hideSearchResults() {
+        const resultsContainer = document.getElementById('searchResults');
+        if (resultsContainer) {
+            resultsContainer.remove();
         }
     }
     

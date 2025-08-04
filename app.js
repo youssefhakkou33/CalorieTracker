@@ -58,13 +58,51 @@ class CalorieTracker {
         // Clear log
         document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
         
-        // Enter key support for food search
-        document.getElementById('foodSearch').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.searchFood();
+        // Auto-search functionality with debouncing
+        let searchTimeout;
+        document.getElementById('foodSearch').addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            const searchInput = e.target;
+            
+            // Clear existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Hide results if search is empty
+            if (!query) {
+                this.hideSearchResults();
+                searchInput.classList.remove('search-typing');
+                return;
+            }
+            
+            // Add typing indicator
+            searchInput.classList.add('search-typing');
+            
+            // Debounce search - wait 500ms after user stops typing
+            searchTimeout = setTimeout(() => {
+                searchInput.classList.remove('search-typing');
+                this.searchFood(false); // Don't show loading state for auto-search
+            }, 500);
         });
         
-        // Search button
-        document.getElementById('searchBtn').addEventListener('click', () => this.searchFood());
+        // Enter key support for food search (still keep this for immediate search)
+        document.getElementById('foodSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                // Clear any pending timeout and search immediately
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+                e.target.classList.remove('search-typing');
+                this.searchFood(true); // Show loading state for Enter key
+            }
+        });
+        
+        // Search button (still keep this as backup)
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            document.getElementById('foodSearch').classList.remove('search-typing');
+            this.searchFood(true); // Show loading state for button click
+        });
         
         // Close modal on backdrop click
         document.getElementById('settingsModal').addEventListener('click', (e) => {
@@ -77,8 +115,8 @@ class CalorieTracker {
             document.getElementById(input).addEventListener('input', () => this.validateInput(input));
         });
         
-        // Quantity change updates totals
-        document.getElementById('quantity').addEventListener('input', () => this.updateFoodTotals());
+        // Weight change updates totals
+        document.getElementById('weight').addEventListener('input', () => this.updateFoodTotals());
     }
     
     // Animate elements on page load
@@ -103,7 +141,7 @@ class CalorieTracker {
         const protein = parseFloat(document.getElementById('protein').value) || 0;
         const carbs = parseFloat(document.getElementById('carbs').value) || 0;
         const fats = parseFloat(document.getElementById('fats').value) || 0;
-        const quantity = parseFloat(document.getElementById('quantity').value) || 1;
+        const weight = parseFloat(document.getElementById('weight').value) || 100;
         
         if (!foodName) {
             this.showNotification('Please enter a food name', 'error');
@@ -115,14 +153,17 @@ class CalorieTracker {
             return;
         }
         
+        // Calculate nutritional values based on weight (assuming base values are per 100g)
+        const weightRatio = weight / 100;
+        
         const foodItem = {
             id: Date.now(),
             name: foodName,
-            calories: calories * quantity,
-            protein: protein * quantity,
-            carbs: carbs * quantity,
-            fats: fats * quantity,
-            quantity: quantity,
+            calories: calories * weightRatio,
+            protein: protein * weightRatio,
+            carbs: carbs * weightRatio,
+            fats: fats * weightRatio,
+            weight: weight,
             timestamp: new Date().toISOString()
         };
         
@@ -137,19 +178,22 @@ class CalorieTracker {
         this.saveToStorage();
         this.animateFoodItem(foodItem);
         
-        this.showNotification(`Added ${foodName} to your log!`, 'success');
+        this.showNotification(`Added ${weight}g of ${foodName} to your log!`, 'success');
     }
     
     // Search for food using USDA API
-    async searchFood() {
+    async searchFood(showLoadingState = true) {
         const query = document.getElementById('foodSearch').value.trim();
         if (!query) return;
         
-        // Show loading state
+        // Show loading state only for manual searches (button clicks, enter key)
         const searchBtn = document.getElementById('searchBtn');
-        const originalHTML = searchBtn.innerHTML;
-        searchBtn.innerHTML = '<div class="loading-spinner"></div>';
-        searchBtn.disabled = true;
+        let originalHTML;
+        if (showLoadingState) {
+            originalHTML = searchBtn.innerHTML;
+            searchBtn.innerHTML = '<div class="loading-spinner"></div>';
+            searchBtn.disabled = true;
+        }
         
         try {
             // Call backend API that integrates USDA
@@ -157,19 +201,29 @@ class CalorieTracker {
             const results = await response.json();
             
             if (results.length > 0) {
-                // Show search results in a dropdown or modal
+                // Show search results in a dropdown
                 this.displaySearchResults(results);
-                this.showNotification(`Found ${results.length} food options!`, 'success');
+                if (showLoadingState) {
+                    this.showNotification(`Found ${results.length} food options!`, 'success');
+                }
             } else {
-                this.showNotification('No foods found. Try a different search term.', 'info');
+                this.hideSearchResults();
+                if (showLoadingState) {
+                    this.showNotification('No foods found. Try a different search term.', 'info');
+                }
             }
             
         } catch (error) {
             console.error('Search error:', error);
-            this.showNotification('Search failed. Please try again.', 'error');
+            this.hideSearchResults();
+            if (showLoadingState) {
+                this.showNotification('Search failed. Please try again.', 'error');
+            }
         } finally {
-            searchBtn.innerHTML = originalHTML;
-            searchBtn.disabled = false;
+            if (showLoadingState) {
+                searchBtn.innerHTML = originalHTML;
+                searchBtn.disabled = false;
+            }
         }
     }
     
@@ -180,7 +234,7 @@ class CalorieTracker {
         if (!resultsContainer) {
             resultsContainer = document.createElement('div');
             resultsContainer.id = 'searchResults';
-            resultsContainer.className = 'absolute z-50 mt-2 w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl max-h-64 overflow-y-auto';
+            resultsContainer.className = 'absolute z-50 mt-2 w-full rounded-xl max-h-64 overflow-y-auto';
             
             const searchContainer = document.getElementById('foodSearch').parentElement;
             searchContainer.style.position = 'relative';
@@ -188,17 +242,17 @@ class CalorieTracker {
         }
         
         if (results.length === 0) {
-            resultsContainer.innerHTML = '<div class="p-4 text-gray-400 text-center">No results found</div>';
+            resultsContainer.innerHTML = '<div class="p-4 text-slate-300 text-center">No results found</div>';
             return;
         }
         
         resultsContainer.innerHTML = results.map((food, index) => `
-            <div class="search-result-item p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0" 
+            <div class="search-result-item p-4 cursor-pointer" 
                  onclick="app.selectFood(${index})" data-food='${JSON.stringify(food)}'>
                 <div class="flex justify-between items-start">
                     <div class="flex-1">
-                        <h4 class="font-semibold text-white">${food.name}</h4>
-                        <div class="flex items-center space-x-4 text-xs text-gray-300 mt-1">
+                        <h4 class="font-semibold text-slate-50 mb-2">${food.name}</h4>
+                        <div class="flex items-center space-x-4 text-sm text-slate-300 mb-2">
                             <span class="flex items-center">
                                 <i class="fas fa-fire text-orange-400 mr-1"></i>
                                 ${food.calories} kcal
@@ -216,7 +270,7 @@ class CalorieTracker {
                                 ${food.fats}g F
                             </span>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1">
+                        <div class="text-xs text-slate-400">
                             ${food.source === 'usda' ? '🇺🇸 USDA Database' : '📁 Local Database'} • 
                             ${food.category || 'General'}
                         </div>
@@ -227,7 +281,22 @@ class CalorieTracker {
         
         // Auto-hide results when clicking outside
         setTimeout(() => {
-            document.addEventListener('click', this.hideSearchResults.bind(this), { once: true });
+            const hideOnClick = (e) => {
+                const resultsContainer = document.getElementById('searchResults');
+                const searchInput = document.getElementById('foodSearch');
+                const searchButton = document.getElementById('searchBtn');
+                
+                // Don't hide if clicking on the search input, button, or results container
+                if (resultsContainer && 
+                    !resultsContainer.contains(e.target) && 
+                    e.target !== searchInput && 
+                    e.target !== searchButton) {
+                    this.hideSearchResults();
+                    document.removeEventListener('click', hideOnClick);
+                }
+            };
+            
+            document.addEventListener('click', hideOnClick);
         }, 100);
     }
     
@@ -259,10 +328,16 @@ class CalorieTracker {
         document.getElementById('protein').value = food.protein;
         document.getElementById('carbs').value = food.carbs;
         document.getElementById('fats').value = food.fats;
-        document.getElementById('quantity').value = 1;
+        document.getElementById('weight').value = 100; // Default to 100g
+        
+        // Store base values for weight calculations (values are assumed to be per 100g)
+        document.getElementById('calories').setAttribute('data-base', food.calories);
+        document.getElementById('protein').setAttribute('data-base', food.protein);
+        document.getElementById('carbs').setAttribute('data-base', food.carbs);
+        document.getElementById('fats').setAttribute('data-base', food.fats);
         
         // Animate input fields
-        const inputs = document.querySelectorAll('#foodName, #calories, #protein, #carbs, #fats');
+        const inputs = document.querySelectorAll('#foodName, #calories, #protein, #carbs, #fats, #weight');
         inputs.forEach((input, index) => {
             setTimeout(() => {
                 input.style.transform = 'scale(1.05)';
@@ -271,9 +346,9 @@ class CalorieTracker {
         });
     }
     
-    // Update food totals based on quantity
+    // Update food totals based on weight
     updateFoodTotals() {
-        const quantity = parseFloat(document.getElementById('quantity').value) || 1;
+        const weight = parseFloat(document.getElementById('weight').value) || 100;
         const baseCalories = parseFloat(document.getElementById('calories').getAttribute('data-base')) || 
                            parseFloat(document.getElementById('calories').value) || 0;
         const baseProtein = parseFloat(document.getElementById('protein').getAttribute('data-base')) || 
@@ -283,7 +358,7 @@ class CalorieTracker {
         const baseFats = parseFloat(document.getElementById('fats').getAttribute('data-base')) || 
                        parseFloat(document.getElementById('fats').value) || 0;
         
-        // Store base values if not already stored
+        // Store base values if not already stored (assume per 100g)
         if (!document.getElementById('calories').getAttribute('data-base')) {
             document.getElementById('calories').setAttribute('data-base', baseCalories);
             document.getElementById('protein').setAttribute('data-base', baseProtein);
@@ -291,11 +366,12 @@ class CalorieTracker {
             document.getElementById('fats').setAttribute('data-base', baseFats);
         }
         
-        // Update values
-        document.getElementById('calories').value = (baseCalories * quantity).toFixed(0);
-        document.getElementById('protein').value = (baseProtein * quantity).toFixed(1);
-        document.getElementById('carbs').value = (baseCarbs * quantity).toFixed(1);
-        document.getElementById('fats').value = (baseFats * quantity).toFixed(1);
+        // Calculate values based on weight (base values are per 100g)
+        const weightRatio = weight / 100;
+        document.getElementById('calories').value = (baseCalories * weightRatio).toFixed(0);
+        document.getElementById('protein').value = (baseProtein * weightRatio).toFixed(1);
+        document.getElementById('carbs').value = (baseCarbs * weightRatio).toFixed(1);
+        document.getElementById('fats').value = (baseFats * weightRatio).toFixed(1);
     }
     
     // Remove food item from log
@@ -430,7 +506,7 @@ class CalorieTracker {
                             </span>
                         </div>
                         <p class="text-xs text-gray-400 mt-1">
-                            Quantity: ${food.quantity} • ${new Date(food.timestamp).toLocaleTimeString()}
+                            Weight: ${food.weight || food.quantity || '100'}g • ${new Date(food.timestamp).toLocaleTimeString()}
                         </p>
                     </div>
                     <button onclick="app.removeFood(${food.id})" class="ml-4 p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all duration-300">
@@ -545,7 +621,7 @@ class CalorieTracker {
         document.getElementById('protein').value = '';
         document.getElementById('carbs').value = '';
         document.getElementById('fats').value = '';
-        document.getElementById('quantity').value = '1';
+        document.getElementById('weight').value = '100';
         document.getElementById('foodSearch').value = '';
         
         // Clear data-base attributes

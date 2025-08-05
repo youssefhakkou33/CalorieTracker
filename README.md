@@ -1,18 +1,141 @@
-# CalorieTracker - Modern Macro & Calorie Tracking App
+# 🥗 CalorieTracker - Modern Nutrition Tracking App
 
-A sleek, modern calorie and macro tracking application built with JavaScript, HTML, CSS, Tailwind CSS, and MongoDB. Features beautiful animations, a responsive design, and comprehensive nutrition tracking.
+A sleek, modern calorie and macro tracker with MongoDB integration and USDA food database access.
 
-## 🌟 Features
+## ✨ Features
 
-- **Modern UI/UX**: Sleek glass-morphism design with smooth animations
-- **Macro Tracking**: Track calories, protein, carbs, and fats
-- **Progress Visualization**: Animated progress bars and ring charts
-- **Food Database**: Searchable database of common foods
-- **Daily Goals**: Customizable daily nutrition targets
-- **Real-time Updates**: Instant feedback with smooth animations
+- **Real-time Food Search**: Search from 380,000+ foods using USDA API + local database
+- **Automatic Search**: Type to search - no clicking required
+- **Weight-based Tracking**: Precise gram measurements for accurate nutrition
+- **MongoDB Integration**: Cloud database storage for your daily logs
+- **Glass Morphism UI**: Beautiful, modern interface with smooth animations
 - **Responsive Design**: Works perfectly on desktop and mobile
-- **MongoDB Integration**: Persistent data storage
-- **Local Storage Backup**: Works offline with local storage fallback
+
+## 🚀 Deployment Options
+
+### Option 1: Vercel (Recommended for Production)
+
+This app is optimized for Vercel deployment with serverless functions:
+
+1. **Fork/Clone this repository**
+2. **Set up environment variables** in Vercel dashboard:
+   ```
+   MONGODB_URI=your_mongodb_connection_string
+   USDA_API_KEY=your_usda_api_key
+   ```
+3. **Deploy to Vercel**: Connect your GitHub repo to Vercel
+4. **Done!** Your app will be live with full functionality
+
+See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for detailed instructions.
+
+### Option 2: Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/youssefhakkou33/CalorieTracker.git
+cd CalorieTracker
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your MongoDB URI and USDA API key
+
+# Seed the database (optional)
+npm run seed
+
+# Start the server
+npm start
+```
+
+Visit `http://localhost:3000` to use the app.
+
+## 🛠️ Technology Stack
+
+- **Frontend**: HTML5, CSS3, Tailwind CSS, Vanilla JavaScript
+- **Backend**: Node.js, Express.js (local) / Vercel Serverless Functions (production)
+- **Database**: MongoDB Atlas
+- **API**: USDA FoodData Central API
+- **Deployment**: Vercel
+
+## 📱 How to Use
+
+1. **Search for Food**: Start typing any food name - results appear automatically
+2. **Select Food**: Click on any search result to populate nutrition fields
+3. **Adjust Weight**: Change the weight (in grams) to match your serving
+4. **Add to Log**: Click "Add Food" to track your consumption
+5. **Monitor Progress**: View your daily macro progress in real-time
+
+## 🎯 Key Features Explained
+
+### Smart Search System
+- **Local Database**: 101 common foods for instant results
+- **USDA Integration**: 380,000+ foods with official nutrition data
+- **Auto-complete**: Real-time search as you type
+- **Duplicate Detection**: Smart filtering of similar foods
+
+### Precise Tracking
+- **Weight-based**: Enter nutrition per 100g, specify actual weight
+- **Real-time Calculation**: Values update automatically as you adjust weight
+- **Macro Breakdown**: Track calories, protein, carbs, and fats
+- **Visual Progress**: Progress bars and percentage breakdowns
+
+### Modern Interface
+- **Glass Morphism**: Beautiful translucent design elements
+- **Smooth Animations**: Engaging micro-interactions
+- **Responsive**: Works on all devices and screen sizes
+- **Dark Theme**: Eye-friendly interface for any time of day
+
+## 🔑 Environment Variables
+
+```env
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/calorietracker
+USDA_API_KEY=your_usda_api_key_here
+```
+
+## 📦 Project Structure
+
+```
+CalorieTracker/
+├── api/                    # Vercel serverless functions
+│   ├── search-food.js     # Food search endpoint
+│   ├── daily-log.js       # Daily log management
+│   └── add-food.js        # Add food to log
+├── scripts/               # Database scripts
+│   └── seedDatabase.js    # Seed local food database
+├── index.html            # Main application
+├── app.js               # Frontend logic
+├── styles.css           # Custom styles
+├── server.js            # Local development server
+├── vercel.json          # Vercel configuration
+└── package.json         # Dependencies
+
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit changes: `git commit -am 'Add feature'`
+4. Push to branch: `git push origin feature-name`
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **USDA FoodData Central** for providing comprehensive nutrition data
+- **MongoDB Atlas** for cloud database hosting
+- **Vercel** for seamless deployment platform
+
+---
+
+**Live Demo**: [Deploy your own instance on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/youssefhakkou33/CalorieTracker)
+
+Built with ❤️ for better nutrition tracking
 
 ## 🚀 Quick Start
 

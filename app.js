@@ -271,7 +271,7 @@ class CalorieTracker {
                             </span>
                         </div>
                         <div class="text-xs text-slate-400">
-                            ${food.source === 'usda' ? '🇺🇸 USDA Database' : '📁 Local Database'} • 
+                            📁 Local Database • 
                             ${food.category || 'General'}
                         </div>
                     </div>
